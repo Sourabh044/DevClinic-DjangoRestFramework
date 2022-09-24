@@ -31,7 +31,7 @@ def get_tokens_for_user(user):
 class UserLoginView(APIView):
     renderer_classes = [UserRenderer]
 
-    def get(self, request):
+    def post(self, request):
         serializer = UserLoginSerializer(data=request.data)
         try:
             if serializer.is_valid():
@@ -85,7 +85,7 @@ class UserSignupView(APIView):
                 return Response({
                     'status': True,
                     'message': "User Created",
-                    'token': token
+                   'token': token
                 }, status=status.HTTP_201_CREATED)
             return Response({
                 'status': False,
@@ -102,21 +102,25 @@ class UserSignupView(APIView):
 class UserVerifyView(APIView):
     renderer_classes = [UserRenderer]
     permission_classes = [IsAuthenticated]
-    def get(self,request):
+    def post(self,request):
         id = request.user.id
         user = User.objects.get(id=id)
-        if user.is_verified==True:
-            return Response({
-                'status': False,
-                'msg': 'already verified'
-            })
+        # if user.is_verified==True:
+        #     return Response({
+        #         'status': False,
+        #         'msg': 'already verified'
+        #     })
         data = request.data
         try:
             try:
                 print(user,'initial otp:',user.otp)
-                if user.otp == int(data['otp']):
+                dataotp = data['otp']
+                print(int(dataotp['otp']))
+                if int(dataotp['otp']) == user.otp:
+                        print('inside if')
                         import random
                         otp = random.randint(1000,9999)
+                        print('random otp generated')
                         # print(otp)
                         data['is_verified'] = True
                         data['otp'] = otp
@@ -124,6 +128,7 @@ class UserVerifyView(APIView):
                         serializer = UserVerifySerializer(user,data=data, partial=True)
                         serializer.is_valid(raise_exception=True)
                         print(serializer.validated_data.get('otp'))
+                        print('updating user')
                         serializer.save()
                         return Response({
                         'msg' : 'bhai tera otp match hogya',

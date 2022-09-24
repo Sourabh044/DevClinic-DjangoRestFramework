@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import *
 from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import (TokenRefreshView)
 router = DefaultRouter()
 router.register(r'patients',PatientViewSet, basename='patients')
 # To delete patient just add its id after the url ends eg. http://127.0.0.1:8000/25/patients/
@@ -20,6 +21,7 @@ urlpatterns = [
     path('login/', UserLoginView.as_view(), name='login'),
     path('login/verify/', UserVerifyView.as_view(), name='verify' ),
     path('profile/', UserProfileView.as_view(), name='profile' ),
+    path('profile/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('profile/changepassword/', UserPasswordChange.as_view(), name='change-password' ),
     path('profile/forgotpassword/', UserPasswordResetMail.as_view(), name='reset-password-email' ),
     path('profile/resetpassword/', UserPasswordReset.as_view(), name='reset-password' ),
