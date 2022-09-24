@@ -6,7 +6,7 @@ import re
 from xml.dom import ValidationErr
 from rest_framework import serializers
 
-from accounts.utils import send_email_token, send_reset_otp
+from accounts.utils import  send_reset_otp
 from .models import Patient , Appointment , User
 from django.template.defaultfilters import slugify
 

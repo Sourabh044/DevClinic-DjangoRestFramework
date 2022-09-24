@@ -1,3 +1,6 @@
+from datetime import date, datetime , timedelta
+from random import Random
+from time import time
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
@@ -16,6 +19,22 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 # Generating token Manually
 
+def otpexpire(user):
+    time = datetime.now().astimezone()-user.updated_at.astimezone()
+    total_seconds = time.total_seconds() 
+    minutes = total_seconds/60
+    print(minutes)
+    if(minutes>5):
+        return True
+    else:
+        return False
+
+def genOtp(user):
+    import random
+    user.otp = random.randint(1000,9999)
+    print(user.otp)
+    user.save()
+    return user.otp
 
 def get_tokens_for_user(user):
     refresh = RefreshToken.for_user(user)
@@ -40,6 +59,27 @@ class UserLoginView(APIView):
                 user = authenticate(email=email, password=password)
                 if user is not None:
                     token = get_tokens_for_user(user)
+                    if not user.is_verified:
+                        print('Updated_at',user.updated_at.astimezone(),'\nTime now',datetime.now().astimezone())
+                        if otpexpire(user):
+                            otp = genOtp(user)
+                            send_email_token(user.otp,user.email)
+                            return Response({
+                                'status' :False,
+                                'info': 'OTP Expired',
+                                'msg': 'Request OTP',
+                                'token': token
+                            })
+                        import random
+                        otp = genOtp(user)
+                        send_email_token(user.otp,user.email)
+                        return Response({
+                        'status': True,
+                        'info': 'Verify_user',
+                        'msg':'An otp send to your registered email.',
+                        'is_verified': user.is_verified,
+                        'token': token
+                    })
                     return Response({
                         'status': True,
                         'message': 'login Successfully',
@@ -105,26 +145,31 @@ class UserVerifyView(APIView):
     def post(self,request):
         id = request.user.id
         user = User.objects.get(id=id)
-        # if user.is_verified==True:
-        #     return Response({
-        #         'status': False,
-        #         'msg': 'already verified'
-        #     })
+        if user.is_verified==True:
+            otp = genOtp(user)
+            print('newotp',otp)
+            return Response({
+                'status': False,
+                'msg': 'already verified'
+            })
         data = request.data
         try:
             try:
                 print(user,'initial otp:',user.otp)
-                dataotp = data['otp']
-                print(int(dataotp['otp']))
-                if int(dataotp['otp']) == user.otp:
-                        print('inside if')
-                        import random
-                        otp = random.randint(1000,9999)
-                        print('random otp generated')
-                        # print(otp)
+                # dataotp = data['otp']
+                # print(int(dataotp['otp']))
+                if int(data['otp']) == user.otp:
+                        if otpexpire(user):
+                            otp = genOtp(user)
+                            send_email_token(user.otp,user.email)
+                            return Response({
+                                'status' :False,
+                                'info': 'OTP Expired',
+                                'msg': 'Request OTP',
+                            })                            
+                        otp = genOtp(user)
                         data['is_verified'] = True
                         data['otp'] = otp
-                        print(data)
                         serializer = UserVerifySerializer(user,data=data, partial=True)
                         serializer.is_valid(raise_exception=True)
                         print(serializer.validated_data.get('otp'))
@@ -217,19 +262,18 @@ class UserPasswordResetMail(APIView):
 
 class UserPasswordReset(APIView):
     renderer_classes = [UserRenderer]
-
     def post(self,request):
         data = request.data
         email = request.data['email']
         user = User.objects.get(email=email)
-        # print(f'data otp, {data["otp"]} \nuser otp: {user.otp}')
         if 'otp' in data:
             try:
                 if int(data['otp']) == user.otp:
                     user.password = make_password(data['password'])
-                    import random
-                    user.otp = random.randint(1000,9999)
-                    user.save()
+                    otp = genOtp(user)
+                    # import random
+                    # user.otp = random.randint(1000,9999)
+                    # user.save()
                     return Response({
                         'status' : True,
                         'msg': 'New Password Set.'           
