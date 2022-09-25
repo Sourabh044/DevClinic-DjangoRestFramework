@@ -156,9 +156,9 @@ class UserVerifyView(APIView):
         try:
             try:
                 print(user,'initial otp:',user.otp)
-                # dataotp = data['otp']
-                # print(int(dataotp['otp']))
-                if int(data['otp']) == user.otp:
+                dataotp = (data['otp'])
+                print(type(dataotp['otp']))
+                if int(dataotp['otp']) == user.otp:
                         if otpexpire(user):
                             otp = genOtp(user)
                             send_email_token(user.otp,user.email)
